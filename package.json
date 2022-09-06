@@ -1,8 +1,9 @@
 {
   "name": "react-scoped-css-loader",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A webpack loader to build scoped css for react applications",
+  "main": "lib/classNames.js",
+  "types": "lib/classNames.d.ts",
   "files": [
     "lib/**/*"
   ],
@@ -10,14 +11,30 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "format": "prettier --write \"src/**/*.ts\"",
-    "lint": "tslint -p tsconfig.json"
+    "lint": "tslint -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepublishOnly": "npm run lint",
+    "preversion": "npm run lint",
+    "version": "npm run format && git add -A src",
+    "postversion": "git push && git push --tags"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dinesh-gamage/react-scoped-css-loader.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "scoped css",
+    "scoped styles",
+    "react scoped css",
+    "react scoped styles",
+    "react",
+    "scoped",
+    "scoped css loader",
+    "scoped style loader",
+    "react scoped css loader",
+    "react scoped style loader"
+  ],
+  "author": "dinesh-gamage",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/dinesh-gamage/react-scoped-css-loader/issues"
