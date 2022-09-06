@@ -1,9 +1,9 @@
 {
   "name": "react-scoped-css-loader",
-  "version": "1.0.5",
+  "version": "1.0.7",
   "description": "A webpack loader to build scoped css for react applications",
-  "main": "classNames.js",
-  "types": "classNames.d.ts",
+  "main": "lib/classNames.js",
+  "types": "lib/classNames.d.ts",
   "files": [
     "lib/**/*"
   ],
