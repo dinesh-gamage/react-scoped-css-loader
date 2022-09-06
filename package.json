@@ -1,9 +1,9 @@
 {
   "name": "react-scoped-css-loader",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "A webpack loader to build scoped css for react applications",
-  "main": "lib/classNames.js",
-  "types": "lib/classNames.d.ts",
+  "main": "classNames.js",
+  "types": "classNames.d.ts",
   "files": [
     "lib/**/*"
   ],
@@ -41,9 +41,7 @@
   },
   "homepage": "https://github.com/dinesh-gamage/react-scoped-css-loader#readme",
   "bundleDependencies": false,
-  "dependencies": {
-    "crypto-js": "^4.1.1"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@types/node": "^18.7.15",
     "@types/webpack": "^5.28.0",

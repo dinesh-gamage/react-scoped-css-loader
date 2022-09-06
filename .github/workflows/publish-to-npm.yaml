@@ -1,0 +1,23 @@
+on: push
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 12
+      - name: Install 
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Check lint
+        run: npm run lint
+      - name: Copy files 
+        run: cp ./package.json ./lib/
+      - name: Go to lib directory 
+        run: cd ./lib
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
