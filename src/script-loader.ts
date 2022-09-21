@@ -3,9 +3,8 @@ import { generateHash, ILoaderOptions, validateOptions } from './utils';
 
 module.exports = function (this: LoaderContext<ILoaderOptions>, source: string): string {
   const options = this.getOptions();
-  const logger = this.getLogger()
 
-  validateOptions(options, logger)
+  validateOptions(options);
 
   const validCSSClassNameRegexp = /\-?[_a-zA-Z]+[_a-zA-Z0-9-]*/;
   const classNameVariableRegexp = /className:\s([a-zA-Z_$][0-9a-zA-Z_$]*)\s/g;
@@ -16,14 +15,14 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
   const stringRegex = /["'](.*?)["']/;
   const objectRegex = /\{(.*?)\}/;
   const classNamesRegex = /.classNames\((.*?)\)/;
-  const ternaryRegex = /{(.*?)\?(.*?):(.*?)}/g
+  const ternaryRegex = /{(.*?)\?(.*?):(.*?)}/g;
 
   const hashValue = generateHash(this.resourcePath, options);
 
   let updatedSource = source;
 
-  let exclude = options.exclude || []
-  if (exclude.length == 0) exclude = ['app']
+  let exclude = options.exclude || [];
+  if (exclude.length === 0) exclude = ['app'];
 
   /**
    * className attribute can contains
@@ -56,47 +55,26 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
 
   updatedSource = updatedSource.replace(interpollatedClassNameRegexp, (match: string, content: string) => {
     // find and replace expressions with white space
-    const expressions: string[] = [];
-
-    content = content.replace(expressionRegexp, (expMatch: string, expContent: string) => {
-      expressions.push(expMatch);
-      return '';
-    });
-
-    const updatedNames = findValidNamesAndAppendHash(content).split(' ');
+    const { expressions, remainingContent } = filterExpressions(content, expressionRegexp);
+    const updatedNames = findValidNamesAndAppendHash(remainingContent).split(' ');
 
     for (const exp of expressions) {
-      // // hack to avoid processing interpolations :D
-      // updatedNames.push(appendHash(exp.replace(/ /g, '')));
-
-      const matches = ternaryRegex.exec(exp)
+      // extract groups from expression
+      const matches = ternaryRegex.exec(exp);
       if (matches) {
-        const condition = matches[1]?.replace(/"/g, '').trim()
-        let trueValue = matches[2]?.replace(/"/g, '').trim()
-        let falseValue = matches[3]?.replace(/"/g, '').trim()
+        const condition = matches[1]?.replace(/"/g, '').trim();
+        const trueValue = findVariblesAndNamesAndAppendHash(matches[2]?.replace(/"/g, '').trim());
+        const falseValue = findVariblesAndNamesAndAppendHash(matches[3]?.replace(/"/g, '').trim());
 
-        if (stringRegex.test(trueValue)) {
-          trueValue = trueValue.replace(stringRegex, (tvMatch, tvContent) => {
-            if (canExclude(tvContent)) return tvMatch
-            return "'" + appendHash(tvContent) + "'";
-          })
-        }
-        if (stringRegex.test(falseValue)) {
-          trueValue = trueValue.replace(stringRegex, (fvMatch, fvContent) => {
-            if (canExclude(fvContent)) return fvMatch
-            return "'" + appendHash(fvContent) + "'";
-          })
-        }
-
-        updatedNames.push(`\${${condition}? ${trueValue}: ${falseValue}}`)
+        updatedNames.push(`\${${condition}? ${trueValue}: ${falseValue}}`);
+      } else {
+        // if not groups found
+        // hack to avoid processing interpolations :D
+        updatedNames.push(appendHash(exp.replace(/ /g, '')));
       }
-      else {
-        updatedNames.push(appendHash(exp.replace(/ /g, '')))
-      }
-
     }
 
-    return 'className: `' + updatedNames.join(' ') + '`';
+    return 'className: `' + updatedNames.join(' ').replace(/  +/g, ' ') + '`';
   });
 
   /**
@@ -116,29 +94,13 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
    * Ex: className={classNames('container', theme, {'has-header': hasHeader})}
    */
   updatedSource = updatedSource.replace(classNamesFunctionRegexp, (match: string, content: string) => {
-    const expressions: string[] = [];
-
     const updated: string = match.replace(classNamesRegex, (classMatch: string, classContent: string) => {
-      // find objects and replace with white space
-      content = content.replace(objectRegex, (expMatch) => {
-        expressions.push(expMatch);
-        return '';
-      });
-
-      const updatedNames = content
+      const { expressions, remainingContent } = filterExpressions(content, objectRegex);
+      const updatedNames = remainingContent
         .split(',')
         .map((name) => {
           if (name.trim().length === 0) return;
-          // string
-          if (stringRegex.test(name)) {
-            return name.replace(stringRegex, (nameMatch, nameContent) => {
-              if (canExclude(nameContent)) return nameMatch
-              return "'" + appendHash(nameContent) + "'";
-
-            });
-          }
-          // variable
-          return '`' + appendHash('${' + name.trim() + '}') + '`';
+          return findVariblesAndNamesAndAppendHash(name);
         })
         .filter((name) => !!name);
 
@@ -152,11 +114,12 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
               // string
               if (stringRegex.test(name)) {
                 return name.replace(stringRegex, (objMatch, objContent) => {
-                  if (canExclude(objContent)) return "'" + objContent.trim() + "':" + condition
-                  return "'" + appendHash(objContent.trim()) + "':" + condition;
+                  if (canExclude(objContent))
+                    return "'" + findValidNamesAndAppendHash(objContent.trim()) + "':" + condition;
+                  return "'" + appendHash(findValidNamesAndAppendHash(objContent.trim())) + "':" + condition;
                 });
               }
-              //variable
+              // variable
               return '[`' + appendHash('${' + name.trim() + '}') + '`]:' + condition;
             })
             .filter((name) => !!name)
@@ -172,6 +135,17 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
     });
     return updated;
   });
+
+  function canExclude(name: string) {
+    let canExcludeName = false;
+    for (const prefix of exclude) {
+      if (name.startsWith(`${prefix.trim()}-`)) {
+        canExcludeName = true;
+        break;
+      }
+    }
+    return canExcludeName;
+  }
 
   function appendHash(className: string) {
     return (className = className + '-' + hashValue);
@@ -192,15 +166,25 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
     return updated;
   }
 
-  function canExclude(name: string) {
-    let canExclude = false
-    for (const prefix of exclude) {
-      if (name.startsWith(`${prefix.trim()}-`)) {
-        canExclude = true
-        break
-      }
+  function findVariblesAndNamesAndAppendHash(content: string) {
+    if (stringRegex.test(content)) {
+      content = content.replace(stringRegex, (match, className) => {
+        return "'" + findValidNamesAndAppendHash(className) + "'";
+      });
+    } else {
+      content = '`' + appendHash('${' + content.trim() + '}') + '`';
     }
-    return canExclude
+    return content;
+  }
+
+  function filterExpressions(content: string, expRegex: RegExp) {
+    const expressions: string[] = [];
+    const remainingContent = content.replace(expRegex, (expMatch: string, expContent: string) => {
+      expressions.push(expMatch);
+      return '';
+    });
+
+    return { expressions, remainingContent };
   }
 
   return updatedSource;
