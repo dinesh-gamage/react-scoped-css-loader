@@ -3,7 +3,7 @@ A webpack loader to build scoped css for react applications
 
 
 
-# Ojective
+# Objective
 React is lacking the scoped css/styling feature. Even though there are other ways to achive the scoped styling, there are bit tedious to implement.
 
 I'm working with react applications on daily basis and couldn't find a better sollution. I wanted to build a simple solution. This has only been tested (so far) with a react/typescript application which uses sass.

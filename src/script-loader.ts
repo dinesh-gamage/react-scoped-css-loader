@@ -1,8 +1,11 @@
 import { LoaderContext } from 'webpack';
-import { generateHash, ILoaderOptions } from './utils';
+import { generateHash, ILoaderOptions, validateOptions } from './utils';
 
 module.exports = function (this: LoaderContext<ILoaderOptions>, source: string): string {
   const options = this.getOptions();
+  const logger = this.getLogger()
+
+  validateOptions(options, logger)
 
   const validCSSClassNameRegexp = /\-?[_a-zA-Z]+[_a-zA-Z0-9-]*/;
   const classNameVariableRegexp = /className:\s([a-zA-Z_$][0-9a-zA-Z_$]*)\s/g;
@@ -13,10 +16,14 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
   const stringRegex = /["'](.*?)["']/;
   const objectRegex = /\{(.*?)\}/;
   const classNamesRegex = /.classNames\((.*?)\)/;
+  const ternaryRegex = /{(.*?)\?(.*?):(.*?)}/g
 
-  const hashValue = generateHash(this.resourcePath, options.salt);
+  const hashValue = generateHash(this.resourcePath, options);
 
   let updatedSource = source;
+
+  let exclude = options.exclude || []
+  if (exclude.length == 0) exclude = ['app']
 
   /**
    * className attribute can contains
@@ -59,8 +66,34 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
     const updatedNames = findValidNamesAndAppendHash(content).split(' ');
 
     for (const exp of expressions) {
-      // hack to avoid processing interpolations :D
-      updatedNames.push(appendHash(exp.replace(/ /g, '')));
+      // // hack to avoid processing interpolations :D
+      // updatedNames.push(appendHash(exp.replace(/ /g, '')));
+
+      const matches = ternaryRegex.exec(exp)
+      if (matches) {
+        const condition = matches[1]?.replace(/"/g, '').trim()
+        let trueValue = matches[2]?.replace(/"/g, '').trim()
+        let falseValue = matches[3]?.replace(/"/g, '').trim()
+
+        if (stringRegex.test(trueValue)) {
+          trueValue = trueValue.replace(stringRegex, (tvMatch, tvContent) => {
+            if (canExclude(tvContent)) return tvMatch
+            return "'" + appendHash(tvContent) + "'";
+          })
+        }
+        if (stringRegex.test(falseValue)) {
+          trueValue = trueValue.replace(stringRegex, (fvMatch, fvContent) => {
+            if (canExclude(fvContent)) return fvMatch
+            return "'" + appendHash(fvContent) + "'";
+          })
+        }
+
+        updatedNames.push(`\${${condition}? ${trueValue}: ${falseValue}}`)
+      }
+      else {
+        updatedNames.push(appendHash(exp.replace(/ /g, '')))
+      }
+
     }
 
     return 'className: `' + updatedNames.join(' ') + '`';
@@ -96,11 +129,15 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
         .split(',')
         .map((name) => {
           if (name.trim().length === 0) return;
+          // string
           if (stringRegex.test(name)) {
             return name.replace(stringRegex, (nameMatch, nameContent) => {
+              if (canExclude(nameContent)) return nameMatch
               return "'" + appendHash(nameContent) + "'";
+
             });
           }
+          // variable
           return '`' + appendHash('${' + name.trim() + '}') + '`';
         })
         .filter((name) => !!name);
@@ -112,11 +149,14 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
             .map((keyValue) => {
               const [name, condition] = keyValue.split(':', 2);
               if (name.trim().length === 0) return;
+              // string
               if (stringRegex.test(name)) {
                 return name.replace(stringRegex, (objMatch, objContent) => {
+                  if (canExclude(objContent)) return "'" + objContent.trim() + "':" + condition
                   return "'" + appendHash(objContent.trim()) + "':" + condition;
                 });
               }
+              //variable
               return '[`' + appendHash('${' + name.trim() + '}') + '`]:' + condition;
             })
             .filter((name) => !!name)
@@ -143,13 +183,24 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
       .map((className) => {
         // check if a valid css classname and append hash
         if (!!className && validCSSClassNameRegexp.test(className.trim())) {
-          className = appendHash(className);
+          if (!canExclude(className)) className = appendHash(className);
         }
         return className.trim();
       })
       .join(' ');
 
     return updated;
+  }
+
+  function canExclude(name: string) {
+    let canExclude = false
+    for (const prefix of exclude) {
+      if (name.startsWith(`${prefix.trim()}-`)) {
+        canExclude = true
+        break
+      }
+    }
+    return canExclude
   }
 
   return updatedSource;
