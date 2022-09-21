@@ -138,14 +138,19 @@ const [hasHeader, setHasHeader] = useState(false);
 
 
 ## How this works  
-`react-scoped-css-loader` will generate a hash value based on the file path (Ex: `./index`) and append that hash at the end of the class name. Ex: `container-816e6e0ba3` 
+In simple terms `react-scoped-css-loader` identifies the valid classNames and append a hash value generated based on the configurations (check the configuration section for more details).
 
-So if you are sharing your components across multiple projects/applications hash value could be the same if the file paths are same. Project A can have a index.tsx and Project B can have a index.tsx, so the hash will be same. to avoid colitions we can pass a unique key as a configuration. Please check the configurations section.
+Basic configuration will generate a hash value based on the file path (Ex: `./index`) and append that hash at the end of the class name. Ex: `container-816e6e0ba3` 
+
+If you want to share your component across multiple projects you can pass a `salt`(a unique string) and generate a unique hash value. 
+
 
 ## Configurations 
-`react-scoped-css-loader`  allows you to configure a `salt` - a unique key (can be any string values. make sure to use different salt in different projects)
+There are three configuration options. values for these options must be same for the both loaders. 
 
-Make sure that you pass the same `salt` value to both loader 
+1. `salt` - a unique string - If you want to share your components across multiple projects make sure to pass a different salt for each project
+2. `useGlobalHash` - accepts boolean value - default is false - if the value is true, you must pass a `salt`. When this option is enabled it will use the given salt to generate the hash (file path will not be used here). you will have a one global hash for the entire project
+3. `exclude` - a list (array) of class name prefixes. if not provided library will use `app` as default value. This option will exclude class names that are prefixed with the given prefixes from appending the hash value. 
 
 
 ```
@@ -161,7 +166,9 @@ Make sure that you pass the same `salt` value to both loader
                     {
                         loader:  "react-scoped-css-loader/lib/style-loader",
                         options: {
-                            salt: "some random/unique string "
+                            salt: "some random/unique string",
+                            useGlobalHash: true,
+                            exclude: ['app']
                         }
                     },
                    
@@ -175,7 +182,9 @@ Make sure that you pass the same `salt` value to both loader
                     {
                         loader:  "react-scoped-css-loader/lib/script-loader",
                         options: {
-                            salt: "some random/unique string "
+                            salt: "some random/unique string",
+                            useGlobalHash: true,
+                            exclude: ['app']
                         }
                     },
                     'ts-loader',
@@ -186,6 +195,77 @@ Make sure that you pass the same `salt` value to both loader
         ]
     }
 
+
+```
+
+# Limitations 
+Library will not evaluate the variables when excluding. instead it will use interpolations to append the hash value. So do not use variables if you want to exclude the classname assigned to that variable. 
+
+This limitation is only if you want to exclude a classname form appending the hash value. example usage(usecase) will be to have some global styles for the project (check the global styles section for more details) .
+
+```
+// index.tsx 
+
+// below code will not exclude the 'app-container' class and it will be appended with the hash value.
+
+const appContainer = 'app-container'
+<div className={appContainer}> 
+
+
+// instead of above code use the classname directly 
+<div className={'app-container'}> 
+
+// you can do the same with other options (interpolation and classNames function) as well. They also will not be able to evealuate the varibles
+
+```
+
+
+# Global styles 
+You can use `exclude` option in the configuration to have some global styles in your project. 
+
+Update the configuration and pass the prefixes you want to use for global styling. Ex. `app` 
+
+```
+// webpack.config.js
+
+...
+{
+    loader:  "react-scoped-css-loader/lib/script-loader",
+    options: {
+        exclude: ['app']
+    }
+},
+
+```
+
+then in you style sheet write your styles. prefix the classnames with `app` 
+
+```
+// global.scss 
+
+.app-container {
+    // your styles 
+}
+
+.app-header {
+    // your styles
+}
+
+```
+
+then use those styles anywhere 
+
+```
+// index.tsx
+
+<div className='app-container'> </div>
+
+```
+
+```
+// header.tsx 
+
+<div claName='app-header'> </div>
 
 ```
 
