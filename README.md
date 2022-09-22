@@ -9,7 +9,7 @@ React is lacking the scoped css/styling feature. Even though there are other way
 I'm working with react applications on daily basis and couldn't find a better sollution. I wanted to build a simple solution. This has only been tested (so far) with a react/typescript application which uses sass.
 
 
-Object of this library to give the developer a simple way to implement scoped css/styling to their react applications. You can keep working on the applcation and styles as you did earlier, `react-scope-css-loader` will take care of the scoping :smiley:
+Objective of this library to give the developer a simple way to implement scoped css/styling to their react applications. You can keep working on the applcation and styles as you did earlier, `react-scope-css-loader` will take care of the scoping :smiley:
 
 
 # Usage 
@@ -199,9 +199,39 @@ There are three configuration options. values for these options must be same for
 ```
 
 # Limitations 
-Library will not evaluate the variables when excluding. instead it will use interpolations to append the hash value. So do not use variables if you want to exclude the classname assigned to that variable. 
+There are two limitations. 
 
-This limitation is only if you want to exclude a classname form appending the hash value. example usage(usecase) will be to have some global styles for the project (check the global styles section for more details) .
+1. when creating a re-usable component, if you want to pass a custom class name for the component you will have to use the property name as `className`.
+
+check the sample below
+```
+// common.tsx 
+// re-usable component 
+
+interface IProps {
+    ...
+    className?: string
+}
+
+const CommonComponent: React.FC<IProps> =(props) => {
+
+    return <div className={classNames('common-component', props.className)}  ></div>
+}
+
+```
+
+and whe you use it 
+
+```
+// index.tsx 
+
+return <div>
+    <CommonComponent className='custom-class-name'>
+</div>
+
+```
+
+2. Library will not evaluate the variables when excluding. instead it will use interpolations to append the hash value. So do not use variables if you want to exclude the classname assigned to that variable. This limitation is only if you want to exclude a classname form appending the hash value. example usage(usecase) will be to have some global styles for the project (check the global styles section for more details) .
 
 ```
 // index.tsx 

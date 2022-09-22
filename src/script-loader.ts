@@ -114,9 +114,7 @@ module.exports = function (this: LoaderContext<ILoaderOptions>, source: string):
               // string
               if (stringRegex.test(name)) {
                 return name.replace(stringRegex, (objMatch, objContent) => {
-                  if (canExclude(objContent))
-                    return "'" + findValidNamesAndAppendHash(objContent.trim()) + "':" + condition;
-                  return "'" + appendHash(findValidNamesAndAppendHash(objContent.trim())) + "':" + condition;
+                  return "'" + findValidNamesAndAppendHash(objContent.trim()) + "':" + condition;
                 });
               }
               // variable
