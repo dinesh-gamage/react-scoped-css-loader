@@ -26,8 +26,8 @@ v2 is a full rewrite with a better architecture, broader bundler support, and co
 
 ```bash
 npm uninstall react-scoped-css-loader
-npm install react-scoped-css
-npx react-scoped-css init
+npm install @dinesh-gamage/react-scoped-css
+npx @dinesh-gamage/react-scoped-css init
 ```
 
 `npx react-scoped-css init` detects your bundler (Vite, Next.js, or webpack) and prints the exact config snippet to add. No code changes needed in your components or stylesheets.
