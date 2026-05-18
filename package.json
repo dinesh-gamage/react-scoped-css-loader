@@ -1,7 +1,8 @@
 {
   "name": "react-scoped-css-loader",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "A webpack loader to build scoped css for react applications",
+  "deprecated": "react-scoped-css-loader is no longer maintained. Migrate to react-scoped-css (v2) — zero code changes required, works with Vite, Next.js, and webpack. See https://github.com/dinesh-gamage/react-scoped-css",
   "main": "lib/classNames.js",
   "types": "lib/classNames.d.ts",
   "files": [

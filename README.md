@@ -1,313 +1,101 @@
 # react-scoped-css-loader
-A webpack loader to build scoped css for react applications
 
+> **This package is deprecated.**
+>
+> Please migrate to [react-scoped-css](https://github.com/dinesh-gamage/react-scoped-css) — the v2 rewrite.
 
+---
 
-# Objective
-React is lacking the scoped css/styling feature. Even though there are other ways to achive the scoped styling, there are bit tedious to implement.
+## Migrating to v2
 
-I'm working with react applications on daily basis and couldn't find a better sollution. I wanted to build a simple solution. This has only been tested (so far) with a react/typescript application which uses sass.
+v2 is a full rewrite with a better architecture, broader bundler support, and correct handling of all className patterns.
 
+**What's different:**
 
-Objective of this library to give the developer a simple way to implement scoped css/styling to their react applications. You can keep working on the applcation and styles as you did earlier, `react-scope-css-loader` will take care of the scoping :smiley:
+| | v1 (`react-scoped-css-loader`) | v2 (`react-scoped-css`) |
+|---|---|---|
+| Approach | webpack-only custom loaders | Babel plugin + PostCSS plugin |
+| Bundler support | webpack only | Vite, Next.js, webpack |
+| className patterns | string literals, basic interpolation | all patterns — variables, ternaries, classNames(), template literals |
+| SCSS | via sass-loader | auto-detected, no extra config |
+| CSS Modules | may double-process | `.module.*` files skipped automatically |
+| Hash stability | absolute file path | relative path — identical on all machines and in CI |
+| Runtime helper | included in JSX output always | injected only when needed (static = zero runtime) |
 
+**Migration steps:**
 
-# Usage 
-
-Install the library `npm i react-scoped-css-loader`
-
-Then update the `webpack.config.js` file.
-
-This has two loaders 
-
-1. style-loader (react-scoped-css-loader/lib/style-loader) 
-2. script-loader (react-scoped-css-loader/lib/script-loader) 
-
-
-## style-loader 
-`style-loader` will handle the style sheets (tested with sass). Add the loader after `css-loader` and before `sass-loader`
-
-## script-loader 
-`script-loader` will handle the scripts (tested with typescript). Add the loader before the `ts-loader`
-
-
-## example 
-```
-// webpack.config.js
-
- module: {
-        rules: [
-            {
-                test: /\.(sa|sc|c)ss$/,
-                use: [
-                    "style-loader",
-                    "css-loader",
-                    "react-scoped-css-loader/lib/style-loader"
-                    "sass-loader"
-                ],
-            },
-            {
-                test: /\.ts(x?)$/,
-                exclude: /node_modules/,
-                use: [
-                    "react-scoped-css-loader/lib/script-loader",
-                    'ts-loader',
-                ]
-            },
-        
-        
-        ]
-    }
-
-
+```bash
+npm uninstall react-scoped-css-loader
+npm install react-scoped-css
+npx react-scoped-css init
 ```
 
-now create a stylesheet with the same file name as `.tsx` file and start writing your styles. 
+`npx react-scoped-css init` detects your bundler (Vite, Next.js, or webpack) and prints the exact config snippet to add. No code changes needed in your components or stylesheets.
 
+---
 
-### basic usage
-```
-// index.tsx 
+## v1 docs (archived)
 
-<div className="container"> </div>
+The original v1 documentation is preserved below for reference.
 
+<details>
+<summary>Show v1 docs</summary>
 
-// or you can use variables  
-const containerClass = "container" 
+### Objective
 
-<div className={containerClass}></div>
+React is lacking the scoped css/styling feature. Even though there are other ways to achieve the scoped styling, there are bit tedious to implement.
 
-```
+Objective of this library is to give the developer a simple way to implement scoped css/styling to their react applications. You can keep working on the application and styles as you did earlier, `react-scoped-css-loader` will take care of the scoping.
 
+### Usage
 
-```
-// index.scss
+Install the library: `npm i react-scoped-css-loader`
 
-.conatainer {
-    // your styles
+Then update `webpack.config.js`:
+
+```js
+module: {
+    rules: [
+        {
+            test: /\.(sa|sc|c)ss$/,
+            use: [
+                "style-loader",
+                "css-loader",
+                "react-scoped-css-loader/lib/style-loader",
+                "sass-loader"
+            ],
+        },
+        {
+            test: /\.ts(x?)$/,
+            exclude: /node_modules/,
+            use: [
+                "react-scoped-css-loader/lib/script-loader",
+                'ts-loader',
+            ]
+        },
+    ]
 }
 ```
 
+### Configuration
 
-### with interpolation
-
-```
-// index.tsx 
-
-const [hasHeader, setHasHeader] = useState(false);
-
-<div className={`container ${hasHeader ? 'has-header' : ''}`}>
-
-
-// or 
-
-const containerClass = "container" 
-const [hasHeader, setHasHeader] = useState(false);
-
-<div className={`${containerClass} ${hasHeader ? 'has-header' : ''}`}>
-
-```
-
-```
-// index.scss
-
-.conatainer {
-    // your styles
-
-    &.has-header {
-        // your styles
-    }
-}
-
-```
-
-
-### use classNames function 
-`react-scoped-css-loader` has a `classNames` functiction to apply class names conditionally
-
-```
-// index.tsx 
-
-import { classNames } from "react-scoped-css-loader";
-
-const [hasHeader, setHasHeader] = useState(false);
-
-<div className={classNames("container", { "has-header": hasHeader })}> </div>
-
-```
-
-
-## How this works  
-In simple terms `react-scoped-css-loader` identifies the valid classNames and append a hash value generated based on the configurations (check the configuration section for more details).
-
-Basic configuration will generate a hash value based on the file path (Ex: `./index`) and append that hash at the end of the class name. Ex: `container-816e6e0ba3` 
-
-If you want to share your component across multiple projects you can pass a `salt`(a unique string) and generate a unique hash value. 
-
-
-## Configurations 
-There are three configuration options. values for these options must be same for the both loaders. 
-
-1. `salt` - a unique string - If you want to share your components across multiple projects make sure to pass a different salt for each project
-2. `useGlobalHash` - accepts boolean value - default is false - if the value is true, you must pass a `salt`. When this option is enabled it will use the given salt to generate the hash (file path will not be used here). you will have a one global hash for the entire project
-3. `exclude` - a list (array) of class name prefixes. if not provided library will use `app` as default value. This option will exclude class names that are prefixed with the given prefixes from appending the hash value. 
-
-
-```
-// webpack.config.js
-
- module: {
-        rules: [
-            {
-                test: /\.(sa|sc|c)ss$/,
-                use: [
-                    "style-loader",
-                    "css-loader",
-                    {
-                        loader:  "react-scoped-css-loader/lib/style-loader",
-                        options: {
-                            salt: "some random/unique string",
-                            useGlobalHash: true,
-                            exclude: ['app']
-                        }
-                    },
-                   
-                    "sass-loader"
-                ],
-            },
-            {
-                test: /\.ts(x?)$/,
-                exclude: /node_modules/,
-                use: [
-                    {
-                        loader:  "react-scoped-css-loader/lib/script-loader",
-                        options: {
-                            salt: "some random/unique string",
-                            useGlobalHash: true,
-                            exclude: ['app']
-                        }
-                    },
-                    'ts-loader',
-                ]
-            },
-        
-        
-        ]
-    }
-
-
-```
-
-# Limitations 
-There are two limitations. 
-
-1. when creating a re-usable component, if you want to pass a custom class name for the component you will have to use the property name as `className`.
-
-check the sample below
-```
-// common.tsx 
-// re-usable component 
-
-interface IProps {
-    ...
-    className?: string
-}
-
-const CommonComponent: React.FC<IProps> =(props) => {
-
-    return <div className={classNames('common-component', props.className)}  ></div>
-}
-
-```
-
-and whe you use it 
-
-```
-// index.tsx 
-
-return <div>
-    <CommonComponent className='custom-class-name'>
-</div>
-
-```
-
-2. Library will not evaluate the variables when excluding. instead it will use interpolations to append the hash value. So do not use variables if you want to exclude the classname assigned to that variable. This limitation is only if you want to exclude a classname form appending the hash value. example usage(usecase) will be to have some global styles for the project (check the global styles section for more details) .
-
-```
-// index.tsx 
-
-// below code will not exclude the 'app-container' class and it will be appended with the hash value.
-
-const appContainer = 'app-container'
-<div className={appContainer}> 
-
-
-// instead of above code use the classname directly 
-<div className={'app-container'}> 
-
-// you can do the same with other options (interpolation and classNames function) as well. They also will not be able to evealuate the varibles
-
-```
-
-
-# Global styles 
-You can use `exclude` option in the configuration to have some global styles in your project. 
-
-Update the configuration and pass the prefixes you want to use for global styling. Ex. `app` 
-
-```
-// webpack.config.js
-
-...
+```js
 {
-    loader:  "react-scoped-css-loader/lib/script-loader",
+    loader: "react-scoped-css-loader/lib/script-loader",
     options: {
-        exclude: ['app']
+        salt: "some unique string",   // for sharing components across projects
+        useGlobalHash: false,          // true = one hash for the whole project
+        exclude: ['app']              // class name prefixes to leave unscoped
     }
-},
-
-```
-
-then in you style sheet write your styles. prefix the classnames with `app` 
-
-```
-// global.scss 
-
-.app-container {
-    // your styles 
 }
-
-.app-header {
-    // your styles
-}
-
 ```
 
-then use those styles anywhere 
+Options must be the same for both loaders.
 
-```
-// index.tsx
+</details>
 
-<div className='app-container'> </div>
+---
 
-```
+## License
 
-```
-// header.tsx 
-
-<div claName='app-header'> </div>
-
-```
-
-
-# Contributing and Issues 
-Feel free to report any issues or open a PR. 
-
-This is a free and open source application. Just doing this for following reasons 
-
-1. for anyone who is facing the same issues (scoped css in react) and couldn't find a better solution (including me :smiley: ) 
-2. just to have fun, to understand how things work 
-
-so enjoy. use, modify, re-destribute do what ever you want. 
-
-just be civil :wink:!
+ISC
